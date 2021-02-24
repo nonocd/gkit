@@ -14,6 +14,15 @@ import (
 	"gkit/pkg/logs"
 )
 
+const (
+	// DevMode is for develop
+	DevMode = "dev"
+	// ProdMode is for production
+	ProdMode = "prod"
+)
+
+var sigs = []os.Signal{syscall.SIGTERM, syscall.SIGQUIT, syscall.SIGINT, os.Interrupt}
+
 // Server defines application
 type Server struct {
 	Handlers *gin.Engine
@@ -22,27 +31,43 @@ type Server struct {
 }
 
 // NewServer will create a sever with the BConfig.
-func NewServer() *Server {
-	return NewServerWithCfg(BConfig)
+func NewServer(opts ...CfgOption) *Server {
+	srv := NewServerWithCfg(BConfig)
+	for _, o := range opts {
+		o(srv.Cfg)
+	}
+	return srv
 }
 
 // NewServerWithCfg will create a sever with the cfg.
 func NewServerWithCfg(cfg *Config) *Server {
-	return &Server{
+	app := &Server{
 		Server: &http.Server{},
 		Cfg:    cfg,
 	}
+	app.setGinMode()
+	return app
+}
+
+// setGinMode is set gin mode
+func (app *Server) setGinMode() {
+	var ginMode string
+	switch app.Cfg.RunMode {
+	case DevMode:
+		ginMode = gin.DebugMode
+	case ProdMode:
+		ginMode = gin.ReleaseMode
+	default:
+		ginMode = gin.DebugMode
+	}
+	gin.SetMode(ginMode)
 }
 
 // Run application.
 func (app *Server) Run() {
-
-	var sigs = []os.Signal{syscall.SIGTERM, syscall.SIGQUIT, syscall.SIGINT, os.Interrupt}
-
 	app.Server.Handler = app.Handlers
 	app.Server.ReadHeaderTimeout = time.Duration(app.Cfg.ServerTimeOut) * time.Second
 	app.Server.WriteTimeout = time.Duration(app.Cfg.ServerTimeOut) * time.Second
-	// app.Server.ErrorLog = logs.GetLogger("HTTP")
 
 	addr := fmt.Sprintf("%s:%d", app.Cfg.HTTPAddr, app.Cfg.HTTPPort)
 	app.Server.Addr = addr

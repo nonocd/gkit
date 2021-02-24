@@ -1,6 +1,11 @@
 package http
 
-import "time"
+import (
+	"time"
+)
+
+// CfgOption is config option
+type CfgOption func(*Config)
 
 // Config is the main struct for http server
 type Config struct {
@@ -23,7 +28,22 @@ func init() {
 
 func newConfig() *Config {
 	return &Config{
-		RunMode:  "",
-		HTTPPort: 9000,
+		RunMode:       ProdMode,
+		HTTPPort:      9000,
+		ServerTimeOut: 60,
+	}
+}
+
+// WithAppName set app name
+func WithAppName(appname string) CfgOption {
+	return func(cfg *Config) {
+		cfg.AppName = appname
+	}
+}
+
+// WithVersion set app version
+func WithVersion(version string) CfgOption {
+	return func(cfg *Config) {
+		cfg.Version = version
 	}
 }
